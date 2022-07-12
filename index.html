@@ -76,6 +76,10 @@
               items.push({ createdAt, backNumber }); input.value = '';
               break;
             }
+            case 'clone': {
+              alert('클립보드에 복사되었습니다.');
+              break;
+            }
             case 'image': {
               html2canvas(table).then(canvas => canvas.toBlob((blob) => saveAs(blob, `sportit-service-personal-press-${Date.now()}.png`)));
               break;
