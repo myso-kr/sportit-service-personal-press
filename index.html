@@ -76,7 +76,7 @@
               items.push({ createdAt, backNumber }); input.value = '';
               break;
             }
-            case 'clone': {
+            case 'image': {
               html2canvas(table).then(canvas => canvas.toBlob((blob) => saveAs(blob, `sportit-service-personal-press-${Date.now()}.png`)));
               break;
             }
