@@ -1,1 +1,114 @@
-
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="referrer" content="always">
+    <meta name="robots" content="noindex,nofollow">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+    <title>sportit-service-personal-press</title>
+    <style>html, body { height: 100%; }</style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.2.0-beta1/css/bootstrap.min.css" integrity="sha512-o/MhoRPVLExxZjCFVBsm17Pkztkzmh7Dp8k7/3JrtNCHh0AQ489kwpfA3dPSHzKDe8YCuEhxXq3Y71eb/o6amg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.7.7/handlebars.min.js" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js" integrity="sha512-+BMamP0e7wn39JGL8nKAZ3yAQT2dL5oaXWr4ZYlTGkKOaoXM/Yj7c4oy50Ngz5yoUutAG17flueD4F6QpTlPng==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js" integrity="sha512-Qlv6VSKh1gDKGoJbnyA5RMXYcvnpIqhO++MhIM2fStMcGT9i2T//tSwYFlcyoRRDcDZ+TYHpH8azBBCyhpSeqw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  </head>
+  <body>
+    <div class="bg-black text-white h-100 w-100 d-flex justify-content-center align-items-center">
+      <form id="forms" class="container-fluid d-flex flex-column justify-content-center h-100">
+        <input type="hidden" name="type" value="">
+        <div class="d-grid my-3">
+          <h1 id="timer" class="text-center fs-1">00:00:00.00</h1>
+        </div>  
+        <div class="d-grid mb-3 gap-2">
+          <input id="input" type="number" min="0" step="1" max="99999" maxlength="5" autocomplete="off" placeholder="백넘버" class="form-control text-center fs-2">
+          <button type="submit" name="actionType" value="added" onclick="document.querySelector('#forms').type.value = 'added'" class="btn btn-primary btn-lg">추가</button>
+        </div>
+        <div class="d-grid mb-3 flex-grow-1 bg-white text-black overflow-auto rounded">
+          <div>
+            <table id="table" class="table table-striped">
+              <thead>
+                <tr>
+                  <th>순번</th>
+                  <th>배번</th>
+                  <th>통과시간</th>
+                </tr>
+              </thead>
+              <tbody id="tbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="d-flex gap-2 justify-content-between">
+          <button type="submit" name="actionType" value="reset" onclick="document.querySelector('#forms').type.value = 'reset'" class="btn btn-danger btn-lg">데이터 초기화</button>
+          <button type="submit" name="actionType" value="clone" onclick="document.querySelector('#forms').type.value = 'clone'" class="btn btn-success btn-lg">이미지로 저장</button>
+        </div>
+      </form>
+    </div>
+    <script>
+      async function limit_input() {
+        const input = document.querySelector('#input'); if(!input) return;
+        input.addEventListener('input' , function() {
+          if(this.value.length > this.maxLength) this.value = this.value.slice(0, this.maxLength);
+        }, false);
+      };
+      async function timer_start() {
+        const timer = document.querySelector('#timer');  if(!timer) return;
+        timer_start.timer = clearInterval(timer_start.timer);
+        timer_start.timer = setInterval(() => timer.textContent = moment().format('HH:mm:ss.SS'));
+      };
+      async function form_submit() {
+        const input = document.querySelector('#input'); if(!input) return;
+        const forms = document.querySelector('#forms'); if(!forms) return;
+        const table = document.querySelector('#table'); if(!table) return;
+        forms.addEventListener('submit' , async (e) => {
+          e.preventDefault();
+          const createdAt = Date.now(), backNumber = input.value;
+          const items = await localforage.getItem('items') || [];
+          switch(forms.type.value) {
+            case 'added': {
+              items.push({ createdAt, backNumber }); input.value = '';
+              break;
+            }
+            case 'clone': {
+              html2canvas(table).then(canvas => canvas.toBlob((blob) => saveAs(blob, `sportit-service-personal-press-${Date.now()}.png`)));
+              break;
+            }
+            case 'reset': {
+              if(confirm('모든 기록을 리셋합니까?')) items.splice(0, items.length);
+              break;
+            }
+          }
+          await localforage.setItem('items', items);
+          tables_draw();
+        }, false);
+      };
+      async function tables_draw() {
+        const tbody = document.querySelector('#tbody'); if(!tbody) return;
+        const tmpls = Handlebars.compile(`
+        {{#each items}}
+        <tr>
+          <td>{{ offset }}</td>
+          <td>{{ backNumber }}</td>
+          <td>{{ createdAtFormat }}</td>
+        </tr>
+        {{/each}}
+        `);
+        const items = await localforage.getItem('items') || [];
+        const remap = items.reverse().map((item, offset, items)=>{
+          item.offset = items.length - offset;
+          item.createdAtFormat = moment(item.createdAt).format('HH:mm:ss.SS');
+          return item;
+        });
+        tbody.innerHTML = tmpls({ items });
+      }
+      async function init() {
+        await limit_input();
+        await timer_start();
+        await form_submit();
+        await tables_draw();
+      }
+      init();
+    </script>
+  </body>
+</html>
