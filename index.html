@@ -77,7 +77,6 @@
               break;
             }
             case 'clone': {
-              alert('클립보드에 복사되었습니다.');
               break;
             }
             case 'image': {
@@ -119,6 +118,7 @@
           console.info('Text:', e.text);
           console.info('Trigger:', e.trigger);
           e.clearSelection();
+          alert('클립보드에 복사되었습니다.');
         });
         clipboard.on('error', function(e) {
           console.error('Action:', e.action);
